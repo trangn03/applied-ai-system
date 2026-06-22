@@ -42,9 +42,9 @@ classDiagram
         +mark_task_done(task: Task) void
     }
 
-    Owner "1" --> "1..*" Pet : owns
-    Pet "1" *-- "0..*" Task : manages
-    Scheduler "1" --> "1" Pet : schedules for
-    Scheduler "1" --> "1" Owner : uses constraints from
-    Task --> Priority : uses
+Owner "1" --> "1..*" Pet : owns
+Pet "1" *-- "0..*" Task : manages
+Scheduler "1" --> "1" Pet : schedules for
+Scheduler "1" --> "1" Owner : uses constraints from
+Task --> Priority : uses
 

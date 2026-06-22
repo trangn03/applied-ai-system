@@ -47,18 +47,30 @@ pip install -r requirements.txt
 Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
 
 ```
-# e.g.:
-# Daily plan for Biscuit (Golden Retriever):
-#   08:00 — Morning walk (30 min) [priority: high]
-#   09:00 — Feeding (10 min) [priority: high]
-#   ...
+========================================
+        TODAY'S SCHEDULE
+========================================
+Owner : Alex  |  Available: 120 min
+
+--- Buddy (Golden Retriever) ---
+  [    ] Morning walk               30 min  [high]
+  [    ] Flea treatment             15 min  [high]
+  [    ] Brush coat                 20 min  [medium]
+  [    ] Playtime in yard           25 min  [low]
+
+--- Whiskers (Tabby Cat) ---
+  [    ] Litter box clean           10 min  [high]
+  [    ] Vet check-up               45 min  [medium]
+  [    ] Grooming session           20 min  [low]
+
+========================================
 ```
 
 ## 🧪 Testing PawPal+
 
 ```bash
 # Run the full test suite:
-pytest
+python -m pytest
 
 # Run with coverage:
 pytest --cov
@@ -67,7 +79,17 @@ pytest --cov
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts =============================
+platform win32 -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\tngo\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\tngo\Downloads\ai110-module2show-pawpal-starter
+plugins: anyio-4.13.0
+collecting ... collected 2 items
+
+test/test_pawpal.py::test_mark_complete_changes_status PASSED            [ 50%]
+test/test_pawpal.py::test_add_task_increases_pet_task_count PASSED       [100%]
+
+============================== 2 passed in 0.13s ==============================
 ```
 
 ## 📐 Smarter Scheduling
