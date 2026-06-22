@@ -1,40 +1,50 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
+    class Priority {
+        <<enumeration>>
+        HIGH
+        MEDIUM
+        LOW
+    }
+
     class Owner {
+        <<dataclass>>
         +String name
         +int available_minutes
         +String requested_services
     }
 
     class Pet {
+        <<dataclass>>
         +String name
         +String breed
         +List~Task~ tasks
-        +add_task(task)
-        +remove_task(task)
-        +sort_tasks()
+        +add_task(task: Task) void
+        +remove_task(task: Task) void
+        +sort_tasks() void
     }
 
     class Task {
+        <<dataclass>>
         +String title
         +int duration_minutes
         +String priority
-        +bool is_complete
-        +mark_complete()
+        +bool is_complete = False
+        +mark_complete() void
     }
 
     class Scheduler {
+        <<dataclass>>
         +Pet pet
         +Owner owner
         +generate_plan() List~Task~
         +fit_tasks_by_time() List~Task~
         +sort_by_priority() List~Task~
-        +mark_task_done(task)
+        +mark_task_done(task: Task) void
     }
 
-    Owner "1" --> "1" Pet : owns
-    Pet "1" o-- "many" Task : manages
+    Owner "1" --> "1..*" Pet : owns
+    Pet "1" *-- "0..*" Task : manages
     Scheduler "1" --> "1" Pet : schedules for
     Scheduler "1" --> "1" Owner : uses constraints from
+    Task --> Priority : uses
 
