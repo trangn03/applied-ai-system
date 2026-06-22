@@ -19,6 +19,7 @@
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
+  - Yes, I added an enumeration class called ```Priority``` for the scheduler which determine what task should complete first. There are three level apply called high, medium, and low. 
 
 ---
 
@@ -27,14 +28,18 @@
 **a. Constraints and priorities**
 
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
-  - Fill here
+  - The scheduler contains 
+    - Time which includes if its ```duration_minutes``` fits within the owner's remaining ```available_minutes```
+    - Priority as tasks are sorted from high to low before the time check, so higher priority tasks get first access to the available time. 
 - How did you decide which constraints mattered most?
-  - Fill here
+  - I decide which constraints mattered the most by focusing on the pet condition. Based on that, I will able to set priority with the pet. For instance medication would be set higher than grooming. Additionally, time availability is also an important factor as if a task doesn't fit in the owner's available time, it simply can not happen that day.
 
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
+  - 
 - Why is that tradeoff reasonable for this scenario?
+  - This is a reasonable tradeoff because
 
 ---
 
@@ -43,6 +48,7 @@
 **a. How you used AI**
 
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
+  - 
 - What kinds of prompts or questions were most helpful?
 
 **b. Judgment and verification**
