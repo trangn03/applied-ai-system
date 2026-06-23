@@ -156,6 +156,11 @@ class Pet:
         """Remove a task from this pet's task list."""
         self.tasks.remove(task)
 
+    def update_task(self, task: Task, **changes) -> None:
+        """Apply field updates to an existing task in-place using dataclass replace."""
+        idx = self.tasks.index(task)
+        self.tasks[idx] = replace(task, **changes)
+
     def complete_task(self, task: Task, today: Optional[date] = None) -> Optional[Task]:
         """Mark a task complete and, if it recurs, queue its next occurrence.
 

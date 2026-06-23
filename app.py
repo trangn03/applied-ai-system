@@ -184,7 +184,7 @@ else:
         if not visible:
             st.caption("No tasks match this filter.")
         for t in visible:
-            c0, c1, c2, c3, c4, c5 = st.columns([2, 3, 2, 2, 1, 1])
+            c0, c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 3, 2, 2, 1, 1, 1, 1])
             c0.write(t.start_time)
             title = t.title
             if t.is_recurring:
@@ -193,14 +193,40 @@ else:
                     title += f" (next: {t.due_date:%b %d})"
             c1.write(title)
             c2.write(f"{t.duration_minutes} min")
-            c3.write(t.priority.value)
+            priority_badge = {"high": "🔴 high", "medium": "🟡 medium", "low": "🟢 low"}
+            c3.write(priority_badge[t.priority.value])
             c4.write("✅" if t.is_complete else "—")
             if not t.is_complete:
-                if c5.button("Done", key=f"done_{id(t)}"):
+                if c5.button("✓", key=f"done_{id(t)}", help="Mark as done"):
                     new_task = pet.complete_task(t)
                     if new_task is not None:
                         st.toast(f"Queued next {t.recurrence.value} '{t.title}' for {new_task.due_date:%b %d}")
                     st.rerun()
+            if c7.button("🗑️", key=f"del_{id(t)}", help="Delete task"):
+                pet.remove_task(t)
+                st.rerun()
+            edit_key = f"editing_{id(t)}"
+            if not t.is_complete and c6.button("✏️", key=f"edit_btn_{id(t)}", help="Edit task"):
+                st.session_state[edit_key] = not st.session_state.get(edit_key, False)
+            if not t.is_complete and st.session_state.get(edit_key, False):
+                with st.expander("Edit task", expanded=True):
+                    e1, e2, e3, e4, e5 = st.columns(5)
+                    new_title = e1.text_input("Title", value=t.title, key=f"e_title_{id(t)}")
+                    new_start = e2.time_input("Start time", value=time.fromisoformat(t.start_time), step=300, key=f"e_start_{id(t)}")
+                    new_dur = e3.number_input("Duration (min)", min_value=1, max_value=240, value=t.duration_minutes, key=f"e_dur_{id(t)}")
+                    new_pri = e4.selectbox("Priority", ["high", "medium", "low"], index=["high", "medium", "low"].index(t.priority.value), key=f"e_pri_{id(t)}")
+                    new_rec = e5.selectbox("Repeats", ["none", "daily", "weekly"], index=["none", "daily", "weekly"].index(t.recurrence.value), key=f"e_rec_{id(t)}")
+                    if st.button("Save changes", key=f"save_{id(t)}"):
+                        pet.update_task(
+                            t,
+                            title=new_title,
+                            start_time=new_start.strftime("%H:%M"),
+                            duration_minutes=int(new_dur),
+                            priority=Priority(new_pri),
+                            recurrence=Recurrence(new_rec),
+                        )
+                        del st.session_state[edit_key]
+                        st.rerun()
 
         # --- Conflict detection for the selected pet ---
         owner = st.session_state.get("owner")
