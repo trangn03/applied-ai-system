@@ -6,6 +6,13 @@ classDiagram
         LOW
     }
 
+    class Recurrence {
+        <<enumeration>>
+        NONE
+        DAILY
+        WEEKLY
+    }
+
     class Owner {
         <<dataclass>>
         +String name
@@ -20,6 +27,9 @@ classDiagram
         +List~Task~ tasks
         +add_task(task: Task) void
         +remove_task(task: Task) void
+        +complete_task(task: Task) Task
+        +filter_tasks(complete, priority) List~Task~
+        +pending() List~Task~
         +sort_tasks() void
     }
 
@@ -27,9 +37,16 @@ classDiagram
         <<dataclass>>
         +String title
         +int duration_minutes
-        +String priority
+        +Priority priority
+        +String start_time
         +bool is_complete = False
+        +Recurrence recurrence
+        +date due_date
+        +start_minutes() int
+        +end_minutes() int
+        +is_recurring() bool
         +mark_complete() void
+        +next_occurrence(today) Task
     }
 
     class Scheduler {
@@ -39,12 +56,15 @@ classDiagram
         +generate_plan() List~Task~
         +fit_tasks_by_time() List~Task~
         +sort_by_priority() List~Task~
-        +mark_task_done(task: Task) void
+        +sort_by_time() List~Task~
+        +find_conflicts() List
+        +find_conflicts_among(pets)$ List
+        +generate_owner_plan(pets, owner)$ List
+        +mark_task_done(task: Task) Task
     }
 
-Owner "1" --> "1..*" Pet : owns
 Pet "1" *-- "0..*" Task : manages
 Scheduler "1" --> "1" Pet : schedules for
 Scheduler "1" --> "1" Owner : uses constraints from
 Task --> Priority : uses
-
+Task --> Recurrence : uses

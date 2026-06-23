@@ -146,38 +146,59 @@ pytest --cov
 Sample test output:
 
 ```
-============================= test session starts =============================
-platform win32 -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\tngo\AppData\Local\Programs\Python\Python314\python.exe
+===================================================================================================== test session starts =====================================================================================================
+platform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\xtran\Downloads\ai110-module2show-pawpal-starter\.venv\Scripts\python.exe
 cachedir: .pytest_cache
-rootdir: C:\Users\tngo\Downloads\ai110-module2show-pawpal-starter
-plugins: anyio-4.13.0
-collecting ... collected 2 items
+rootdir: C:\Users\xtran\Downloads\ai110-module2show-pawpal-starter
+plugins: anyio-4.14.0
+collected 17 items                                                                                                                                                                                                             
 
-test/test_pawpal.py::test_mark_complete_changes_status PASSED            [ 50%]
-test/test_pawpal.py::test_add_task_increases_pet_task_count PASSED       [100%]
+test/test_pawpal.py::test_mark_complete_changes_status PASSED                                                                                                                                                            [  5%]
+test/test_pawpal.py::test_add_task_increases_pet_task_count PASSED                                                                                                                                                       [ 11%]
+test/test_pawpal.py::test_generate_plan_skips_conflicting_tasks PASSED                                                                                                                                                   [ 17%]
+test/test_pawpal.py::test_generate_plan_keeps_non_overlapping_tasks PASSED                                                                                                                                               [ 23%]
+test/test_pawpal.py::test_owner_plan_avoids_cross_pet_double_booking PASSED                                                                                                                                              [ 29%]
+test/test_pawpal.py::test_owner_plan_shares_one_time_budget PASSED                                                                                                                                                       [ 35%]
+test/test_pawpal.py::test_state_round_trips_through_serialization PASSED                                                                                                                                                 [ 41%]
+test/test_pawpal.py::test_deserialize_handles_missing_owner PASSED                                                                                                                                                       [ 47%]
+test/test_pawpal.py::test_sort_by_time_returns_chronological_order PASSED                                                                                                                                                [ 52%]
+test/test_pawpal.py::test_sort_tasks_breaks_same_time_ties_by_priority_then_duration PASSED                                                                                                                              [ 58%]
+test/test_pawpal.py::test_completing_daily_task_creates_next_day_occurrence PASSED                                                                                                                                       [ 64%]
+test/test_pawpal.py::test_completing_weekly_task_advances_due_date_by_one_week PASSED                                                                                                                                    [ 70%]
+test/test_pawpal.py::test_completing_non_recurring_task_creates_no_followup PASSED                                                                                                                                       [ 76%]
+test/test_pawpal.py::test_find_conflicts_flags_overlapping_times PASSED                                                                                                                                                  [ 82%]
+test/test_pawpal.py::test_find_conflicts_ignores_touching_but_non_overlapping_tasks PASSED                                                                                                                               [ 88%]
+test/test_pawpal.py::test_completing_task_twice_does_not_double_queue PASSED                                                                                                                                             [ 94%]
+test/test_pawpal.py::test_conflict_detection_respects_due_date_across_days PASSED                                                                                                                                        [100%]
 
-============================== 2 passed in 0.13s ==============================
+===================================================================================================== 17 passed in 0.40s ======================================================================================================
 ```
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
+All scheduling logic lives in `pawpal_system.py` (the UI in `app.py` only calls into it), so every behavior below is unit-tested independently of Streamlit. The planner is a **priority-first greedy fit**: pending tasks are considered highest-priority first and a task is added to the plan only if it 
+(a) fits the owner's remaining time budget and
+(b) does not overlap a task already chosen — so the generated plan is always conflict-free,
+not merely within budget.
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Pet.sort_tasks`, `Scheduler.sort_by_time`, `Scheduler.sort_by_priority` | Multi-key sort: start time → priority → duration. Same-slot ties break toward higher priority, then the shorter task. |
+| Filtering | `Pet.filter_tasks`, `Pet.pending`, `Scheduler.fit_tasks_by_time` | Filter by completion and/or priority; the planner skips tasks that don't fit the remaining time budget. |
+| Conflict handling | `tasks_overlap`, `Scheduler.find_conflicts`, `Scheduler.find_conflicts_among` | Half-open overlap (touching ends don't conflict). Per-pet and cross-pet ("owner can't care for two pets at once") detection; the planner refuses to schedule overlapping tasks. |
+| Multi-pet planning | `Scheduler.generate_owner_plan` | One shared time budget across all pets on a single timeline, so a high-priority task on one pet can bump a clashing task on another. |
+| Recurring tasks | `Task.next_occurrence`, `Pet.complete_task` | Completing a `daily`/`weekly` task queues a fresh, pending copy with `due_date` advanced by one day or one week; non-recurring tasks queue nothing. |
+| Persistence | `serialize_state`, `deserialize_state`, `Task/Pet/Owner.to_dict`/`from_dict` | Whole-app state round-trips through JSON so pets and tasks are stored when a browser refresh (and can be downloaded/restored as a backup). |
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+Launch the app with `streamlit run app.py`, then follow along:
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+1. **List out the owner and pet.** Enter the owner's name and the minutes they have available today, then a pet's name and breed. Click **Save owner** and **Add / update pet** — both are confirmed back on screen. Add more pets the same way; one owner can manage several.
+2. **Add tasks for a pet.** Pick a pet from the selector, then fill in a task (title, start time, duration, priority, and whether it repeats daily/weekly) and click **Add task**. Tasks are stored per pet and automatically sorted by start time.
+3. **Track and filter tasks.** The task list shows each task's time, priority, and completion status. Use the **All / Pending / Completed** toggle to filter, and click **Done** to complete a task — recurring tasks automatically queue their next occurrence (e.g. a daily walk reappears for tomorrow).
+4. **Spot conflicts.** If two of a pet's tasks overlap in time, a ⚠️ warning lists the clash. With multiple pets, cross-pet conflicts are flagged separately, since the owner can't care for two pets at once.
+5. **Generate a schedule.** In **Generate Schedule**, choose **Selected pet** or **All pets (shared time)**, then click **Generate schedule**. The planner fits the highest-priority, non-overlapping tasks into the available time and lists what was scheduled, the total time used, and any skipped tasks — including a hint for how many more minutes would fit the ones left out.
+6. **Keep your data.** Pets and tasks are saved automatically and stored when a browser refresh. Use the **💾 Data** sidebar to download a JSON backup or restore one.
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->

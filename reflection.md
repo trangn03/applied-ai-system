@@ -14,6 +14,7 @@
     - ```Pet```: holds pet info, list of task, manages adding, removing, and sorting
     - ```Task```: represents the care activities (name, duration, priority), completion status
     - ```Scheduler```: builds daily schedule based on pet's plan, sort by priority, fit tasks into available time, and delegates task completion
+  - I also added two supporting enumerations, ```Priority``` (high/medium/low) and ```Recurrence``` (none/daily/weekly), which the ```Task``` class uses.
 
 **b. Design changes**
 
@@ -71,12 +72,23 @@
 **a. What you tested**
 
 - What behaviors did you test?
+  - I tested the three core behaviors of the scheduler, plus two edge cases that Claude suggest:
+    - **Sorting correctness** — that ```sort_by_time``` returns tasks in chronological order regardless of the order they were added, and that same-time ties break by priority then duration.
+    - **Recurrence logic** — that completing a daily task marks it done and queues a fresh, incomplete copy due the next day, that a weekly task advances by seven days, and that a non-recurring task creates no follow-up.
+    - **Conflict detection** — that the ```Scheduler``` flags two tasks sharing the same time slot as a conflict, and that two tasks merely touching end-to-end (e.g. 09:00–09:30 and 09:30 onward) are not flagged.
+    - **Two edge cases** — completing an already-complete task should not queue a duplicate occurrence, and two recurring occurrences at the same time but on different days should not count as a conflict.
 - Why were these tests important?
+  - These tests cover the three features that — ordering, recurrence, and conflict detection — so a regression in any of them would directly produce a wrong daily plan for the owner. They were especially important because the edge-case tests caught two bugs I would not have noticed by manual testing: ```complete_task``` had no guard against being called twice, so it silently created duplicate future tasks, and ```find_conflicts``` compared only the time of day and ignored ```due_date```, so it falsely flagged a recurring 09:00 walk on Monday as conflicting with the same walk on Tuesday. 
 
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
+  - I am fairly confident in the core behavior. The full pytest suite (17 tests) passes, and it covers sorting, recurrence, conflict detection, the greedy time-fitting plan, multi-pet scheduling against a shared time budget, and state serialization round-trips. Writing tests also forced bugs to the surface and confirmed the fixes, which raised my confidence beyond just "it looked right when I ran it." 
 - What edge cases would you test next if you had more time?
+  - **Tasks crossing midnight** — a 23:00 task lasting two hours, since ```end_minutes``` can exceed 1440 and never wraps, so a late-night task may not overlap-check correctly against an early-morning one.
+  - **Zero or negative duration**, and an ```available_minutes``` of 0 or negative, to confirm the planner degrades gracefully.
+  - **Recurrence boundaries** — a weekly task crossing a month/year end, and a daily task across the leap day, to confirm date stepping stays correct.
+  - **Overdue catch-up** — completing a daily task whose ```due_date``` is several days in the past, to decide whether the next occurrence should still land one day later or catch up to today.
 
 ---
 
