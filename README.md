@@ -1,6 +1,6 @@
-# PawPal+ (Module 2 Project)
+# PawPal+ 
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
+**PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
 
 ## Scenario
 
@@ -12,10 +12,7 @@ A busy pet owner needs help staying consistent with pet care. They want an assis
 
 Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
 
-## What you will build
-
-Your final app should:
-
+## What I previously build
 - Let a user enter basic owner + pet info
 - Let a user add/edit tasks (duration + priority at minimum)
 - Generate a daily schedule/plan based on constraints and priorities
@@ -24,13 +21,22 @@ Your final app should:
 
 ## Getting started
 
-### Setup
+### Step 1: Clone the repository
+
+### Step 2: Create the virtual environment
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate  # MacOS & Linux
+.venv\Scripts\activate # Windows
 pip install -r requirements.txt
 ```
+
+### Step 3: Install dependencies
+```bash
+pip install -r requirements.txt
+```
+### Step 4: 
 
 ### Suggested workflow
 
@@ -44,9 +50,11 @@ pip install -r requirements.txt
 
 ## 🖥️ Sample Output
 
-Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
+Sample of app's CLI or Streamlit output:
 
 ```
+..........................                                               [100%]
+26 passed in 0.20s
 ====================================================
         ADDED ORDER (as inserted)
 ====================================================
@@ -106,7 +114,6 @@ Owner : Alex  |  Available: 120 min
 
 --- Buddy (Golden Retriever) ---
    9:00  [    ] Flea treatment             15 min  [high]
-  09:05  [    ] Give medicine              20 min  [high]
   12:15  [    ] Brush coat                 20 min  [medium]
   14:10  [    ] Evening feed               20 min  [medium]
   17:00  [    ] Playtime in yard           25 min  [low]
@@ -128,6 +135,25 @@ Owner : Alex  |  Available: 120 min
   [CONFLICT] Whiskers's 'Vet check-up' (14:00-14:45) overlaps Buddy's 'Evening feed' (14:10-14:30)
 
 ====================================================
+====================================================
+        AI-ASSISTED PLANNING (agent.py)
+====================================================
+Owner : Alex  |  Available: 120 min
+Agent adjusted priorities for this run: True
+
+   9:00  [    ] Buddy - Flea treatment     15 min  [high]
+  10:30  [    ] Whiskers - Grooming session  20 min  [low]
+  12:15  [    ] Buddy - Brush coat         20 min  [medium]
+  14:00  [    ] Whiskers - Vet check-up    45 min  [medium]
+
+Skipped:
+  09:05  [    ] Buddy - Give medicine      20 min  [high]
+  14:10  [    ] Buddy - Evening feed       20 min  [medium]
+  17:00  [    ] Buddy - Playtime in yard   25 min  [low]
+
+AI summary: I've mapped out a great schedule for your pets today, Alex! Buddy will receive his flea treatment first thing, followed by a good brush later on. Whiskers is scheduled for a relaxing grooming session before her vet check-up. We'll need to skip Buddy's medicine, evening feed, and playtime today.
+
+====================================================
 ```
 
 ## 🧪 Testing PawPal+
@@ -146,32 +172,41 @@ pytest --cov
 Sample test output:
 
 ```
-===================================================================================================== test session starts =====================================================================================================
-platform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\xtran\Downloads\ai110-module2show-pawpal-starter\.venv\Scripts\python.exe
+======================================================================================== test session starts ========================================================================================
+platform win32 -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\tngo\Downloads\applied-ai-system\venv\Scripts\python.exe
 cachedir: .pytest_cache
-rootdir: C:\Users\xtran\Downloads\ai110-module2show-pawpal-starter
-plugins: anyio-4.14.0
-collected 17 items                                                                                                                                                                                                             
+rootdir: C:\Users\tngo\Downloads\applied-ai-system
+plugins: anyio-4.14.1
+collected 26 items                                                                                                                                                                                   
 
-test/test_pawpal.py::test_mark_complete_changes_status PASSED                                                                                                                                                            [  5%]
-test/test_pawpal.py::test_add_task_increases_pet_task_count PASSED                                                                                                                                                       [ 11%]
-test/test_pawpal.py::test_generate_plan_skips_conflicting_tasks PASSED                                                                                                                                                   [ 17%]
-test/test_pawpal.py::test_generate_plan_keeps_non_overlapping_tasks PASSED                                                                                                                                               [ 23%]
-test/test_pawpal.py::test_owner_plan_avoids_cross_pet_double_booking PASSED                                                                                                                                              [ 29%]
-test/test_pawpal.py::test_owner_plan_shares_one_time_budget PASSED                                                                                                                                                       [ 35%]
-test/test_pawpal.py::test_state_round_trips_through_serialization PASSED                                                                                                                                                 [ 41%]
-test/test_pawpal.py::test_deserialize_handles_missing_owner PASSED                                                                                                                                                       [ 47%]
-test/test_pawpal.py::test_sort_by_time_returns_chronological_order PASSED                                                                                                                                                [ 52%]
-test/test_pawpal.py::test_sort_tasks_breaks_same_time_ties_by_priority_then_duration PASSED                                                                                                                              [ 58%]
-test/test_pawpal.py::test_completing_daily_task_creates_next_day_occurrence PASSED                                                                                                                                       [ 64%]
-test/test_pawpal.py::test_completing_weekly_task_advances_due_date_by_one_week PASSED                                                                                                                                    [ 70%]
-test/test_pawpal.py::test_completing_non_recurring_task_creates_no_followup PASSED                                                                                                                                       [ 76%]
-test/test_pawpal.py::test_find_conflicts_flags_overlapping_times PASSED                                                                                                                                                  [ 82%]
-test/test_pawpal.py::test_find_conflicts_ignores_touching_but_non_overlapping_tasks PASSED                                                                                                                               [ 88%]
-test/test_pawpal.py::test_completing_task_twice_does_not_double_queue PASSED                                                                                                                                             [ 94%]
-test/test_pawpal.py::test_conflict_detection_respects_due_date_across_days PASSED                                                                                                                                        [100%]
+test/test_agent.py::test_suggest_priority_overrides_returns_empty_without_calling_agent_when_no_pending_tasks PASSED                                                                           [  3%]
+test/test_agent.py::test_suggest_priority_overrides_filters_unknown_keys_and_invalid_priorities PASSED                                                                                         [  7%]
+test/test_agent.py::test_suggest_priority_overrides_returns_empty_when_agent_unavailable PASSED                                                                                                [ 11%]
+test/test_agent.py::test_suggest_priority_overrides_returns_empty_on_malformed_json PASSED                                                                                                     [ 15%]
+test/test_agent.py::test_generate_plan_falls_back_when_agent_suggests_nothing PASSED                                                                                                           [ 19%]
+test/test_agent.py::test_generate_plan_applies_a_valid_override PASSED                                                                                                                         [ 23%]
+test/test_agent.py::test_generate_plan_reverts_when_override_cannot_avoid_starvation PASSED                                                                                                    [ 26%]
+test/test_agent.py::test_explain_plan_returns_text_that_references_a_known_task PASSED                                                                                                         [ 30%]
+test/test_agent.py::test_explain_plan_rejects_ungrounded_response PASSED                                                                                                                       [ 34%]
+test/test_pawpal.py::test_mark_complete_changes_status PASSED                                                                                                                                  [ 38%]
+test/test_pawpal.py::test_add_task_increases_pet_task_count PASSED                                                                                                                             [ 42%]
+test/test_pawpal.py::test_generate_plan_skips_conflicting_tasks PASSED                                                                                                                         [ 46%]
+test/test_pawpal.py::test_generate_plan_keeps_non_overlapping_tasks PASSED                                                                                                                     [ 50%]
+test/test_pawpal.py::test_owner_plan_avoids_cross_pet_double_booking PASSED                                                                                                                    [ 53%]
+test/test_pawpal.py::test_owner_plan_shares_one_time_budget PASSED                                                                                                                             [ 57%]
+test/test_pawpal.py::test_state_round_trips_through_serialization PASSED                                                                                                                       [ 61%]
+test/test_pawpal.py::test_deserialize_handles_missing_owner PASSED                                                                                                                             [ 65%]
+test/test_pawpal.py::test_sort_by_time_returns_chronological_order PASSED                                                                                                                      [ 69%]
+test/test_pawpal.py::test_sort_tasks_breaks_same_time_ties_by_priority_then_duration PASSED                                                                                                    [ 73%]
+test/test_pawpal.py::test_completing_daily_task_creates_next_day_occurrence PASSED                                                                                                             [ 76%]
+test/test_pawpal.py::test_completing_weekly_task_advances_due_date_by_one_week PASSED                                                                                                          [ 80%]
+test/test_pawpal.py::test_completing_non_recurring_task_creates_no_followup PASSED                                                                                                             [ 84%]
+test/test_pawpal.py::test_find_conflicts_flags_overlapping_times PASSED                                                                                                                        [ 88%]
+test/test_pawpal.py::test_find_conflicts_ignores_touching_but_non_overlapping_tasks PASSED                                                                                                     [ 92%]
+test/test_pawpal.py::test_completing_task_twice_does_not_double_queue PASSED                                                                                                                   [ 96%]
+test/test_pawpal.py::test_conflict_detection_respects_due_date_across_days PASSED                                                                                                              [100%]
 
-===================================================================================================== 17 passed in 0.40s ======================================================================================================
+======================================================================================== 26 passed in 0.26s =========================================================================================
 ```
 
 ## 📐 Smarter Scheduling
@@ -202,3 +237,5 @@ Launch the app with `streamlit run app.py`, then follow along:
 6. **Keep your data.** Pets and tasks are saved automatically and stored when a browser refresh. Use the **💾 Data** sidebar to download a JSON backup or restore one.
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+
+## Reflection

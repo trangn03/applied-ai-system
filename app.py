@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import time
 from pathlib import Path
 
@@ -15,9 +16,19 @@ from pawpal_system import (
     serialize_state,
     deserialize_state,
 )
+import agent
+from agent import AgentUnavailable
 
 # State is mirrored to this file so a browser refresh doesn't wipe the day.
 DATA_FILE = Path(__file__).parent / "pawpal_data.json"
+
+# Let the API key come from Streamlit secrets (e.g. on Streamlit Cloud) if it
+# isn't already in the environment; agent.py itself only looks at the env var.
+if "GEMINI_API_KEY" not in os.environ:
+    try:
+        os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        pass
 
 
 def t_end(task: Task) -> str:
@@ -274,6 +285,13 @@ scope = st.radio(
     disabled=len(st.session_state.pets) < 2,
 )
 
+use_agent = st.checkbox(
+    "🤖 Use AI to fine-tune priorities and explain this schedule",
+    help="An agent may nudge a task's priority before scheduling (never saved) "
+    "and writes a short explanation of the result. Falls back to the plain "
+    "scheduler if no GEMINI_API_KEY is configured.",
+)
+
 if st.button("Generate schedule"):
     if "owner" not in st.session_state:
         st.warning("Save your owner info first.")
@@ -282,12 +300,17 @@ if st.button("Generate schedule"):
     elif scope == "All pets (shared time)":
         owner = st.session_state.owner
         pets = list(st.session_state.pets.values())
-        plan = Scheduler.generate_owner_plan(pets, owner)
+        if use_agent:
+            plan, used_agent = agent.generate_plan(pets, owner)
+        else:
+            plan, used_agent = Scheduler.generate_owner_plan(pets, owner), False
 
         if not plan:
             st.warning("No tasks fit within the available time. Try adding shorter tasks or increasing available time.")
         else:
             st.success(f"Schedule across all pets — {owner.name} has {owner.available_minutes} min available.")
+            if used_agent:
+                st.caption("🤖 One or more priorities were adjusted by the AI planner for this run.")
             total = 0
             for i, (p, task) in enumerate(plan, start=1):
                 total += task.duration_minutes
@@ -315,19 +338,30 @@ if st.button("Generate schedule"):
                     )
                     st.markdown(f"- {p.name} — {t.title} ({t.duration_minutes} min) — {reason}")
                 render_overflow_hint([t for _, t in skipped], chosen_tasks)
+
+            if use_agent:
+                try:
+                    st.markdown(f"**🤖 AI summary:** {agent.explain_plan(plan, skipped, owner)}")
+                except AgentUnavailable as exc:
+                    st.caption(f"AI explanation unavailable ({exc}).")
     else:
         owner = st.session_state.owner
         pet = st.session_state.pets[selected_name]
         if not pet.tasks:
             st.warning("Add at least one task before generating a schedule.")
         else:
-            scheduler = Scheduler(pet=pet, owner=owner)
-            plan = scheduler.generate_plan()
+            if use_agent:
+                pairs, used_agent = agent.generate_plan([pet], owner)
+            else:
+                pairs, used_agent = [(pet, t) for t in Scheduler(pet=pet, owner=owner).generate_plan()], False
+            plan = [t for _, t in pairs]
 
             if not plan:
                 st.warning("No tasks fit within the available time. Try adding shorter tasks or increasing available time.")
             else:
                 st.success(f"Schedule for {pet.name} — {owner.name} has {owner.available_minutes} min available.")
+                if used_agent:
+                    st.caption("🤖 One or more priorities were adjusted by the AI planner for this run.")
                 total = 0
                 for i, task in enumerate(plan, start=1):
                     total += task.duration_minutes
@@ -348,6 +382,13 @@ if st.button("Generate schedule"):
                         )
                         st.markdown(f"- {t.title} ({t.duration_minutes} min) — {reason}")
                     render_overflow_hint(skipped, plan)
+
+                if use_agent:
+                    try:
+                        skipped_pairs = [(pet, t) for t in skipped]
+                        st.markdown(f"**🤖 AI summary:** {agent.explain_plan(pairs, skipped_pairs, owner)}")
+                    except AgentUnavailable as exc:
+                        st.caption(f"AI explanation unavailable ({exc}).")
 
 # Streamlit reruns this script top-to-bottom on every interaction, so saving
 # here persists whatever the user just changed (added/completed/cleared tasks).

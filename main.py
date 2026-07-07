@@ -1,4 +1,19 @@
+import os
+
 from pawpal_system import Owner, Pet, Task, Scheduler, Priority, format_minutes
+import agent
+from agent import AgentUnavailable
+
+# main.py has no Streamlit context, so fall back to reading the secrets file
+# directly if GEMINI_API_KEY isn't already set in the environment.
+if "GEMINI_API_KEY" not in os.environ:
+    try:
+        import tomllib
+
+        with open(".streamlit/secrets.toml", "rb") as f:
+            os.environ["GEMINI_API_KEY"] = tomllib.load(f)["GEMINI_API_KEY"]
+    except (FileNotFoundError, KeyError, tomllib.TOMLDecodeError):
+        pass
 
 owner = Owner(name="Alex", available_minutes=120)
 
@@ -27,9 +42,11 @@ buddy.add_task(Task(title="Give medicine", duration_minutes=20, priority=Priorit
 buddy.add_task(Task(title="Evening feed", duration_minutes=20, priority=Priority.MEDIUM, start_time="14:10"))
 
 
-def print_task(task: Task) -> None:
+def print_task(task: Task, pet_name: str | None = None) -> None:
     status = "[done]" if task.is_complete else "[    ]"
-    print(f"  {task.start_time:>5}  {status} {task.title:<25} {task.duration_minutes:>3} min  [{task.priority.value}]")
+    title = f"{pet_name} - {task.title}" if pet_name else task.title
+    width = 34 if pet_name else 25
+    print(f"  {task.start_time:>5}  {status} {title:<{width}} {task.duration_minutes:>3} min  [{task.priority.value}]")
 
 
 print("=" * 52)
@@ -124,5 +141,37 @@ if cross:
         print(f"  [CONFLICT] {pa.name}'s '{ta.title}' ({span(ta)}) overlaps {pb.name}'s '{tb.title}' ({span(tb)})")
 else:
     print("  No cross-pet conflicts.")
+
+print("\n" + "=" * 52)
+
+print("=" * 52)
+print("        AI-ASSISTED PLANNING (agent.py)")
+print("=" * 52)
+
+pets = [buddy, whiskers]
+plan, used_agent = agent.generate_plan(pets, owner)
+
+print(f"Owner : {owner.name}  |  Available: {owner.available_minutes} min")
+print(f"Agent adjusted priorities for this run: {used_agent}\n")
+
+if plan:
+    for pet, task in plan:
+        print_task(task, pet_name=pet.name)
+else:
+    print("  No tasks fit within the available time.")
+
+chosen = {id(task) for _, task in plan}
+skipped = [(pet, t) for pet in pets for t in pet.pending() if id(t) not in chosen]
+if skipped:
+    print("\nSkipped:")
+    for pet, task in skipped:
+        print_task(task, pet_name=pet.name)
+
+print()
+try:
+    print("AI summary:", agent.explain_plan(plan, skipped, owner))
+except AgentUnavailable as exc:
+    print(f"AI summary unavailable ({exc}) -- the plan above still came from "
+          "the plain, deterministic scheduler regardless.")
 
 print("\n" + "=" * 52)
