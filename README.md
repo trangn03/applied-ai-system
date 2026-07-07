@@ -96,7 +96,7 @@ This opens PawPal+ in your browser (default: `http://localhost:8501`).
 python -m pytest
 ```
 
-### Suggested workflow (for extending the project)
+## Suggested workflow (for extending the project)
 
 1. Read the scenario carefully and identify requirements and edge cases.
 2. Draft a UML diagram (classes, attributes, methods, relationships).
