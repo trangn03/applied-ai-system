@@ -1,71 +1,76 @@
-classDiagram
-    class Priority {
-        <<enumeration>>
-        HIGH
-        MEDIUM
-        LOW
-    }
+flowchart TD
+    %% ===================== INPUT =====================
+    subgraph INPUT["Input"]
+        UI["Owner enters pets/tasks/available time\nStreamlit UI - app.py"]
+        Toggle{"'Use AI' checkbox\nchecked?"}
+    end
+    UI --> Toggle
 
-    class Recurrence {
-        <<enumeration>>
-        NONE
-        DAILY
-        WEEKLY
-    }
+    %% ===================== DATA MODEL =====================
+    subgraph MODEL["Data model (pawpal_system.py)"]
+        OwnerC["Owner «dataclass»\nname, available_minutes,\nrequested_services"]
+        PetC["Pet «dataclass»\nname, breed, tasks[]\nadd/remove/complete/update/\nfilter_tasks/pending/sort_tasks"]
+        TaskC["Task «dataclass»\ntitle, duration_minutes, priority,\nstart_time, recurrence, due_date\nstart_minutes/end_minutes/\nis_recurring/mark_complete/next_occurrence"]
+        PriorityC["Priority «enum»\nHIGH / MEDIUM / LOW"]
+        RecurrenceC["Recurrence «enum»\nNONE / DAILY / WEEKLY"]
 
-    class Owner {
-        <<dataclass>>
-        +String name
-        +int available_minutes
-        +String requested_services
-    }
+        PetC -- "1 *-- 0..*" --> TaskC
+        TaskC --> PriorityC
+        TaskC --> RecurrenceC
+    end
 
-    class Pet {
-        <<dataclass>>
-        +String name
-        +String breed
-        +List~Task~ tasks
-        +add_task(task: Task) void
-        +remove_task(task: Task) void
-        +complete_task(task: Task) Task
-        +update_task(task: Task, changes) void
-        +filter_tasks(complete, priority) List~Task~
-        +pending() List~Task~
-        +sort_tasks() void
-    }
+    %% ===================== DETERMINISTIC CORE =====================
+    subgraph DETERMINISTIC["Process — deterministic core (Scheduler)"]
+        Sched["Scheduler «dataclass»\npet, owner\ngenerate_owner_plan(): sort by priority\n-> fit by time budget -> reject overlaps\nfind_conflicts / mark_task_done"]
+    end
+    OwnerC --> Sched
+    PetC --> Sched
+    Toggle -- "No" --> Sched
 
-    class Task {
-        <<dataclass>>
-        +String title
-        +int duration_minutes
-        +Priority priority
-        +String start_time
-        +bool is_complete = False
-        +Recurrence recurrence
-        +date due_date
-        +start_minutes() int
-        +end_minutes() int
-        +is_recurring() bool
-        +mark_complete() void
-        +next_occurrence(today) Task
-    }
+    %% ===================== AGENTIC LAYER =====================
+    subgraph AGENTIC["Process — agentic layer (agent.py, Gemini)"]
+        Planner["Plan\nsuggest_priority_overrides()\nLLM proposes priority tweaks"]
+        Act["Act\nre-run Scheduler.generate_owner_plan()\nwith tweaked priorities"]
+        Check{"Check (evaluator)\ndid overrides starve a pet\nthat used to get a task?"}
+        Revise["Revise\nkeep refining overrides\n(max 2 rounds)"]
+        Explain["Explain\nexplain_plan()\nLLM narrates the result"]
+        Ground{"Evaluator\ndoes explanation mention\na real task?"}
+        Fallback["Fallback\ndiscard overrides/explanation\n(raises AgentUnavailable) —\nuse plain Scheduler output"]
+    end
+    Toggle -- "Yes" --> Planner
+    OwnerC --> Planner
+    PetC --> Planner
+    Planner --> Act
+    Act --> Check
+    Check -- "starved, rounds left" --> Revise --> Planner
+    Check -- "starved, no rounds left" --> Fallback
+    Check -- "ok" --> Explain
+    Explain --> Ground
+    Ground -- "no known task / empty /\nAPI error" --> Fallback
+    Ground -- "yes" --> OutputAI
+    Fallback --> Sched
 
-    class Scheduler {
-        <<dataclass>>
-        +Pet pet
-        +Owner owner
-        +generate_plan() List~Task~
-        +fit_tasks_by_time() List~Task~
-        +sort_by_priority() List~Task~
-        +sort_by_time() List~Task~
-        +find_conflicts() List
-        +find_conflicts_among(pets)$ List
-        +generate_owner_plan(pets, owner)$ List
-        +mark_task_done(task: Task) Task
-    }
+    %% ===================== OUTPUT =====================
+    subgraph OUTPUT["Output"]
+        OutputPlain["Schedule shown\n(no AI summary)"]
+        OutputAI["Schedule + AI summary\ncaption: priorities adjusted by AI"]
+    end
+    Sched --> OutputPlain
 
-Pet "1" *-- "0..*" Task : manages
-Scheduler "1" --> "1" Pet : schedules for
-Scheduler "1" --> "1" Owner : uses constraints from
-Task --> Priority : uses
-Task --> Recurrence : uses
+    %% ===================== HUMAN IN THE LOOP =====================
+    subgraph HUMAN["Human-in-the-loop"]
+        Review["Owner reviews schedule,\nconflicts, and skipped tasks"]
+        HumanAction["Owner accepts, edits, deletes,\nor marks a task done"]
+    end
+    OutputPlain --> Review
+    OutputAI --> Review
+    Review --> HumanAction
+    HumanAction -- "state change" --> UI
+
+    %% ===================== TESTING =====================
+    subgraph TESTING["Automated testing"]
+        Tests["test/test_pawpal.py\ncovers Scheduler, Pet, Task\n(deterministic core only)"]
+        Gap["No automated tests for agent.py —\ncorrectness there relies on the\nCheck/Ground evaluator steps above\nplus human review, not test coverage"]
+    end
+    Sched -. "verified by" .-> Tests
+    Tests -. "gap" .-> Gap
