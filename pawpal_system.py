@@ -59,6 +59,12 @@ class Owner:
     available_minutes: int
     requested_services: str = ""
 
+    def __post_init__(self) -> None:
+        # A negative time budget is meaningless; 0 is allowed (the owner simply
+        # gets an empty plan) so a "no time today" case doesn't have to crash.
+        if self.available_minutes < 0:
+            raise ValueError("available_minutes must be zero or positive")
+
     def to_dict(self) -> dict:
         return {
             "name": self.name,
@@ -85,6 +91,17 @@ class Task:
     recurrence: Recurrence = Recurrence.NONE
     due_date: Optional[date] = None  # the day this occurrence is scheduled for
 
+    def __post_init__(self) -> None:
+        # Catch bad data at the source (backups, the CLI, tests) rather than
+        # letting a zero/negative-length task silently distort a schedule.
+        if self.duration_minutes <= 0:
+            raise ValueError("duration_minutes must be positive")
+        hours, _, minutes = self.start_time.partition(":")
+        if not (hours.isdigit() and minutes.isdigit()) or not (
+            0 <= int(hours) <= 23 and 0 <= int(minutes) <= 59
+        ):
+            raise ValueError(f"start_time must be 'HH:MM' in 00:00-23:59, got {self.start_time!r}")
+
     @property
     def start_minutes(self) -> int:
         """Start time as minutes from midnight (parsed from the HH:MM string)."""
@@ -108,12 +125,22 @@ class Task:
 
         Returns a fresh, incomplete copy with its due_date advanced by one day
         (daily) or one week (weekly). Returns None for non-recurring tasks.
+
+        When ``today`` is given and the task is long overdue, the next
+        occurrence catches up in whole steps to the first date that is today or
+        later, so completing a walk that was due five days ago doesn't requeue
+        it in the past. With no ``today`` the behavior is unchanged: exactly one
+        step past the current due_date.
         """
         step = RECURRENCE_STEP.get(self.recurrence)
         if step is None:
             return None
         base = self.due_date or today or date.today()
-        return replace(self, is_complete=False, due_date=base + step)
+        next_date = base + step
+        if today is not None:
+            while next_date < today:
+                next_date += step
+        return replace(self, is_complete=False, due_date=next_date)
 
     def to_dict(self) -> dict:
         """Serialize to plain JSON-friendly types (enums -> str, date -> ISO)."""

@@ -282,52 +282,51 @@ pytest --cov
 Sample test output:
 
 ```
-======================================================================================== test session starts ========================================================================================
-platform win32 -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\tngo\Downloads\applied-ai-system\venv\Scripts\python.exe
-cachedir: .pytest_cache
-rootdir: C:\Users\tngo\Downloads\applied-ai-system
+======================================= test session starts =======================================
+platform win32 -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\...\applied-ai-system
 plugins: anyio-4.14.1
-collected 26 items                                                                                                                                                                                   
+collected 45 items
 
-test/test_agent.py::test_suggest_priority_overrides_returns_empty_without_calling_agent_when_no_pending_tasks PASSED                                                                           [  3%]
-test/test_agent.py::test_suggest_priority_overrides_filters_unknown_keys_and_invalid_priorities PASSED                                                                                         [  7%]
-test/test_agent.py::test_suggest_priority_overrides_returns_empty_when_agent_unavailable PASSED                                                                                                [ 11%]
-test/test_agent.py::test_suggest_priority_overrides_returns_empty_on_malformed_json PASSED                                                                                                     [ 15%]
-test/test_agent.py::test_generate_plan_falls_back_when_agent_suggests_nothing PASSED                                                                                                           [ 19%]
-test/test_agent.py::test_generate_plan_applies_a_valid_override PASSED                                                                                                                         [ 23%]
-test/test_agent.py::test_generate_plan_reverts_when_override_cannot_avoid_starvation PASSED                                                                                                    [ 26%]
-test/test_agent.py::test_explain_plan_returns_text_that_references_a_known_task PASSED                                                                                                         [ 30%]
-test/test_agent.py::test_explain_plan_rejects_ungrounded_response PASSED                                                                                                                       [ 34%]
-test/test_pawpal.py::test_mark_complete_changes_status PASSED                                                                                                                                  [ 38%]
-test/test_pawpal.py::test_add_task_increases_pet_task_count PASSED                                                                                                                             [ 42%]
-test/test_pawpal.py::test_generate_plan_skips_conflicting_tasks PASSED                                                                                                                         [ 46%]
-test/test_pawpal.py::test_generate_plan_keeps_non_overlapping_tasks PASSED                                                                                                                     [ 50%]
-test/test_pawpal.py::test_owner_plan_avoids_cross_pet_double_booking PASSED                                                                                                                    [ 53%]
-test/test_pawpal.py::test_owner_plan_shares_one_time_budget PASSED                                                                                                                             [ 57%]
-test/test_pawpal.py::test_state_round_trips_through_serialization PASSED                                                                                                                       [ 61%]
-test/test_pawpal.py::test_deserialize_handles_missing_owner PASSED                                                                                                                             [ 65%]
-test/test_pawpal.py::test_sort_by_time_returns_chronological_order PASSED                                                                                                                      [ 69%]
-test/test_pawpal.py::test_sort_tasks_breaks_same_time_ties_by_priority_then_duration PASSED                                                                                                    [ 73%]
-test/test_pawpal.py::test_completing_daily_task_creates_next_day_occurrence PASSED                                                                                                             [ 76%]
-test/test_pawpal.py::test_completing_weekly_task_advances_due_date_by_one_week PASSED                                                                                                          [ 80%]
-test/test_pawpal.py::test_completing_non_recurring_task_creates_no_followup PASSED                                                                                                             [ 84%]
-test/test_pawpal.py::test_find_conflicts_flags_overlapping_times PASSED                                                                                                                        [ 88%]
-test/test_pawpal.py::test_find_conflicts_ignores_touching_but_non_overlapping_tasks PASSED                                                                                                     [ 92%]
-test/test_pawpal.py::test_completing_task_twice_does_not_double_queue PASSED                                                                                                                   [ 96%]
-test/test_pawpal.py::test_conflict_detection_respects_due_date_across_days PASSED                                                                                                              [100%]
+test/test_agent.py ........                                                                 [ 20%]
+test/test_eval.py .........                                                                 [ 40%]
+test/test_pawpal.py ............................                                            [100%]
 
-======================================================================================== 26 passed in 0.26s =========================================================================================
+======================================= 45 passed in 0.23s ========================================
 ```
+
+The suite spans three files:
+
+- `test/test_pawpal.py` — the deterministic core, including edge cases for input validation, recurrence across month/year/leap-day boundaries, overdue-task catch-up, and the midnight time-of-day boundary.
+- `test/test_agent.py` — the agentic layer's guardrails (override filtering, Plan→Act→Check→Revise, grounded explanations).
+- `test/test_eval.py` — the reliability-eval metric helpers and the invariant that every agent-produced plan is valid.
 
 ## Testing Summary
 
-**What worked.** All 26 tests pass, split across `test/test_pawpal.py` (the deterministic core: sorting, filtering, conflict detection, recurrence, multi-pet/shared-budget planning, and JSON serialization round-trips) and `test/test_agent.py` (the agentic layer: overrides are filtered to known tasks/valid priorities, the Plan→Act→Check→Revise loop applies a valid override but reverts cleanly when an override can't avoid starving a pet, and `explain_plan` accepts grounded text but rejects a hallucinated one). Every agent test mocks `agent._call` directly, so the suite runs deterministically offline with no real Gemini API calls or key required.
+**What worked.** All 45 tests pass, split across `test/test_pawpal.py` (the deterministic core: sorting, filtering, conflict detection, recurrence, multi-pet/shared-budget planning, and JSON serialization round-trips) and `test/test_agent.py` (the agentic layer: overrides are filtered to known tasks/valid priorities, the Plan→Act→Check→Revise loop applies a valid override but reverts cleanly when an override can't avoid starving a pet, and `explain_plan` accepts grounded text but rejects a hallucinated one). Every agent test mocks `agent._call` directly, so the suite runs deterministically offline with no real Gemini API calls or key required.
 
 **What didn't work at first.** Writing the edge-case tests surfaced two real bugs before they could reach a user: `complete_task` had no guard against being called twice, so completing an already-done task silently queued a duplicate future occurrence; and `find_conflicts` compared only time-of-day and ignored `due_date`, so a recurring 09:00 walk on Monday was falsely flagged as conflicting with the same walk on Tuesday. Both were fixed and locked in by `test_completing_task_twice_does_not_double_queue` and `test_conflict_detection_respects_due_date_across_days`.
 
 **What I learned.** Tests catch bugs that manual clicking through the UI doesn't — both bugs above only showed up once an edge case was written down and asserted on. The other lesson is scope: the deterministic core has full unit coverage, but the AI layer's *quality* (is a suggested override actually a good idea, is an explanation well-written) isn't something a test suite can grade — that's why `agent.py` leans on runtime guardrails (the Check/Revise starvation check, the grounding check in `explain_plan`) and human review in the UI, rather than tests, to catch bad AI output.
 
-**What I'd test next.** Tasks crossing midnight (`end_minutes` can exceed 1440 and never wraps), zero/negative duration or `available_minutes`, recurrence stepping across a month/year boundary or a leap day, and completing a daily task whose `due_date` is several days in the past (does the next occurrence land one day later, or catch up to today?).
+**What I tested next (now covered).** The edge cases previously listed as untested are now in `test/test_pawpal.py`: zero/negative duration and negative `available_minutes` (rejected at construction via `__post_init__`), recurrence stepping across a month, year, and leap-day boundary, the midnight time-of-day boundary (`end_minutes` runs past 1440 while display wraps), and completing a long-overdue daily task (its next occurrence now *catches up* to the reference day instead of requeuing in the past). Writing these surfaced and fixed the input-validation gap and the overdue-recurrence behavior.
+
+## 🔬 AI Reliability Eval (`eval_agent.py`)
+
+Because the agent is non-deterministic, unit tests can pin down its *guardrails* but not its *behavior over repeated runs*. `eval_agent.py` is a small harness that measures exactly that — it satisfies the "Reliability or Testing System" AI feature (*"a script that checks if your AI gives consistent answers"*):
+
+```bash
+python eval_agent.py            # uses live Gemini if GEMINI_API_KEY is set
+python eval_agent.py --runs 10  # more samples per scenario
+```
+
+For each fixed scenario it reports three things:
+
+- **Consistency** — runs the same request N times and reports how often the agent returns the *same* priority overrides (an agreement rate + per-key stability). A scheduler an owner trusts shouldn't give a wildly different answer every run.
+- **Reliability** — confirms the core invariant holds on every run: no matter what the LLM suggested, the plan the agent returns is **conflict-free and within budget** (`plan_is_valid`). This is the promise the whole "AI advises, scheduler decides" design makes.
+- **Grounding** — runs `explain_plan` N times and counts how often the anti-hallucination check accepts the explanation.
+
+Without a `GEMINI_API_KEY` it runs in a clearly-labelled **SIMULATED** mode (canned answers, no API calls) so the report format is demonstrable offline. The metric helpers (`consistency_report`, `plan_is_valid`) are themselves unit-tested in `test/test_eval.py`.
 
 ## Design Decisions
 

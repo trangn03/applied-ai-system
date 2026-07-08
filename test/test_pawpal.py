@@ -4,6 +4,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from datetime import date
 
+import pytest
+
 from pawpal_system import (
     Task,
     Pet,
@@ -11,6 +13,7 @@ from pawpal_system import (
     Recurrence,
     Owner,
     Scheduler,
+    format_minutes,
     serialize_state,
     deserialize_state,
 )
@@ -271,3 +274,98 @@ def test_conflict_detection_respects_due_date_across_days():
     owner = Owner(name="Alex", available_minutes=120)
 
     assert Scheduler(pet=pet, owner=owner).find_conflicts() == []
+
+
+# --- Input validation ----------------------------------------------------
+
+def test_task_rejects_nonpositive_duration():
+    """A zero- or negative-length task is bad data and must be refused."""
+    with pytest.raises(ValueError):
+        Task(title="Ghost task", duration_minutes=0, priority=Priority.LOW)
+    with pytest.raises(ValueError):
+        Task(title="Negative", duration_minutes=-5, priority=Priority.LOW)
+
+
+def test_task_rejects_malformed_start_time():
+    """start_time must be a real HH:MM in the 00:00-23:59 range."""
+    for bad in ["25:00", "09:60", "9am", "noon", ""]:
+        with pytest.raises(ValueError):
+            Task(title="Bad time", duration_minutes=10, priority=Priority.LOW, start_time=bad)
+
+
+def test_owner_rejects_negative_available_minutes():
+    with pytest.raises(ValueError):
+        Owner(name="Alex", available_minutes=-30)
+
+
+def test_owner_with_zero_minutes_schedules_nothing():
+    """Zero available minutes is valid and yields an empty (not crashing) plan."""
+    pet = Pet(name="Buddy", breed="Lab")
+    pet.add_task(Task(title="Walk", duration_minutes=20, priority=Priority.HIGH, start_time="09:00"))
+    owner = Owner(name="Alex", available_minutes=0)
+
+    assert Scheduler(pet=pet, owner=owner).generate_plan() == []
+
+
+# --- Recurrence across calendar boundaries -------------------------------
+
+def test_recurrence_steps_across_month_boundary():
+    """A daily task due on the last of the month rolls to the first of the next."""
+    task = Task(
+        title="Walk", duration_minutes=30, priority=Priority.HIGH,
+        recurrence=Recurrence.DAILY, due_date=date(2026, 6, 30),
+    )
+    assert task.next_occurrence().due_date == date(2026, 7, 1)
+
+
+def test_recurrence_steps_across_leap_day():
+    """A daily task due Feb 28 in a leap year advances to Feb 29, not Mar 1."""
+    task = Task(
+        title="Walk", duration_minutes=30, priority=Priority.HIGH,
+        recurrence=Recurrence.DAILY, due_date=date(2024, 2, 28),
+    )
+    assert task.next_occurrence().due_date == date(2024, 2, 29)
+
+
+def test_recurrence_steps_across_year_boundary():
+    """A weekly task near year-end advances by seven days into January."""
+    task = Task(
+        title="Bath", duration_minutes=45, priority=Priority.MEDIUM,
+        recurrence=Recurrence.WEEKLY, due_date=date(2026, 12, 29),
+    )
+    assert task.next_occurrence().due_date == date(2027, 1, 5)
+
+
+def test_overdue_daily_task_catches_up_to_today():
+    """Completing a long-overdue daily task requeues it for today, not the past."""
+    task = Task(
+        title="Walk", duration_minutes=30, priority=Priority.HIGH,
+        recurrence=Recurrence.DAILY, due_date=date(2026, 6, 22),
+    )
+    # due_date is 5 days behind the reference "today"
+    nxt = task.next_occurrence(today=date(2026, 6, 27))
+    assert nxt.due_date == date(2026, 6, 27)
+    assert nxt.is_complete is False
+
+
+def test_next_occurrence_without_today_advances_exactly_one_step():
+    """With no reference date, behavior is unchanged: one step past due_date."""
+    task = Task(
+        title="Walk", duration_minutes=30, priority=Priority.HIGH,
+        recurrence=Recurrence.DAILY, due_date=date(2026, 6, 22),
+    )
+    assert task.next_occurrence().due_date == date(2026, 6, 23)
+
+
+# --- Time-of-day boundaries ----------------------------------------------
+
+def test_late_task_end_minutes_extend_past_midnight_and_display_wraps():
+    """A late task's end runs past 24:00 in raw minutes but displays wrapped.
+
+    Documents the current (day-local) model: end_minutes is not wrapped, so
+    overlap math stays monotonic within a single day, while format_minutes
+    wraps only for display. Both behaviors are relied on elsewhere.
+    """
+    task = Task(title="Late walk", duration_minutes=60, priority=Priority.LOW, start_time="23:30")
+    assert task.end_minutes == 23 * 60 + 30 + 60  # 1470, not wrapped
+    assert format_minutes(task.end_minutes) == "00:30"  # wrapped for display
