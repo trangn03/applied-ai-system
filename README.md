@@ -282,17 +282,60 @@ pytest --cov
 Sample test output:
 
 ```
-======================================= test session starts =======================================
-platform win32 -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0
-rootdir: C:\Users\...\applied-ai-system
+===================================================================================================== test session starts =====================================================================================================
+platform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\xtran\Downloads\applied-ai-system\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\xtran\Downloads\applied-ai-system
 plugins: anyio-4.14.1
-collected 45 items
+collected 45 items                                                                                                                                                                                                             
 
-test/test_agent.py ........                                                                 [ 20%]
-test/test_eval.py .........                                                                 [ 40%]
-test/test_pawpal.py ............................                                            [100%]
+test/test_agent.py::test_suggest_priority_overrides_returns_empty_without_calling_agent_when_no_pending_tasks PASSED                                                                                                     [  2%]
+test/test_agent.py::test_suggest_priority_overrides_filters_unknown_keys_and_invalid_priorities PASSED                                                                                                                   [  4%]
+test/test_agent.py::test_suggest_priority_overrides_returns_empty_when_agent_unavailable PASSED                                                                                                                          [  6%]
+test/test_agent.py::test_suggest_priority_overrides_returns_empty_on_malformed_json PASSED                                                                                                                               [  8%]
+test/test_agent.py::test_generate_plan_falls_back_when_agent_suggests_nothing PASSED                                                                                                                                     [ 11%]
+test/test_agent.py::test_generate_plan_applies_a_valid_override PASSED                                                                                                                                                   [ 13%]
+test/test_agent.py::test_generate_plan_reverts_when_override_cannot_avoid_starvation PASSED                                                                                                                              [ 15%]
+test/test_agent.py::test_explain_plan_returns_text_that_references_a_known_task PASSED                                                                                                                                   [ 17%]
+test/test_agent.py::test_explain_plan_rejects_ungrounded_response PASSED                                                                                                                                                 [ 20%]
+test/test_eval.py::test_consistency_report_all_identical_is_full_agreement PASSED                                                                                                                                        [ 22%]
+test/test_eval.py::test_consistency_report_measures_partial_agreement PASSED                                                                                                                                             [ 24%]
+test/test_eval.py::test_consistency_report_key_absent_in_some_runs_lowers_stability PASSED                                                                                                                               [ 26%]
+test/test_eval.py::test_consistency_report_handles_no_runs PASSED                                                                                                                                                        [ 28%]
+test/test_eval.py::test_canonical_is_order_independent PASSED                                                                                                                                                            [ 31%]
+test/test_eval.py::test_plan_is_valid_accepts_conflict_free_in_budget_plan PASSED                                                                                                                                        [ 33%]
+test/test_eval.py::test_plan_is_valid_rejects_over_budget_plan PASSED                                                                                                                                                    [ 35%]
+test/test_eval.py::test_plan_is_valid_rejects_overlapping_plan PASSED                                                                                                                                                    [ 37%]
+test/test_eval.py::test_generate_plan_output_is_always_valid_even_with_wild_overrides PASSED                                                                                                                             [ 40%]
+test/test_pawpal.py::test_mark_complete_changes_status PASSED                                                                                                                                                            [ 42%]
+test/test_pawpal.py::test_add_task_increases_pet_task_count PASSED                                                                                                                                                       [ 44%]
+test/test_pawpal.py::test_generate_plan_skips_conflicting_tasks PASSED                                                                                                                                                   [ 46%]
+test/test_pawpal.py::test_generate_plan_keeps_non_overlapping_tasks PASSED                                                                                                                                               [ 48%]
+test/test_pawpal.py::test_owner_plan_avoids_cross_pet_double_booking PASSED                                                                                                                                              [ 51%]
+test/test_pawpal.py::test_owner_plan_shares_one_time_budget PASSED                                                                                                                                                       [ 53%]
+test/test_pawpal.py::test_state_round_trips_through_serialization PASSED                                                                                                                                                 [ 55%]
+test/test_pawpal.py::test_deserialize_handles_missing_owner PASSED                                                                                                                                                       [ 57%]
+test/test_pawpal.py::test_sort_by_time_returns_chronological_order PASSED                                                                                                                                                [ 60%]
+test/test_pawpal.py::test_sort_tasks_breaks_same_time_ties_by_priority_then_duration PASSED                                                                                                                              [ 62%]
+test/test_pawpal.py::test_completing_daily_task_creates_next_day_occurrence PASSED                                                                                                                                       [ 64%]
+test/test_pawpal.py::test_completing_weekly_task_advances_due_date_by_one_week PASSED                                                                                                                                    [ 66%]
+test/test_pawpal.py::test_completing_non_recurring_task_creates_no_followup PASSED                                                                                                                                       [ 68%]
+test/test_pawpal.py::test_find_conflicts_flags_overlapping_times PASSED                                                                                                                                                  [ 71%]
+test/test_pawpal.py::test_find_conflicts_ignores_touching_but_non_overlapping_tasks PASSED                                                                                                                               [ 73%]
+test/test_pawpal.py::test_completing_task_twice_does_not_double_queue PASSED                                                                                                                                             [ 75%]
+test/test_pawpal.py::test_conflict_detection_respects_due_date_across_days PASSED                                                                                                                                        [ 77%]
+test/test_pawpal.py::test_task_rejects_nonpositive_duration PASSED                                                                                                                                                       [ 80%]
+test/test_pawpal.py::test_task_rejects_malformed_start_time PASSED                                                                                                                                                       [ 82%]
+test/test_pawpal.py::test_owner_rejects_negative_available_minutes PASSED                                                                                                                                                [ 84%]
+test/test_pawpal.py::test_owner_with_zero_minutes_schedules_nothing PASSED                                                                                                                                               [ 86%]
+test/test_pawpal.py::test_recurrence_steps_across_month_boundary PASSED                                                                                                                                                  [ 88%]
+test/test_pawpal.py::test_recurrence_steps_across_leap_day PASSED                                                                                                                                                        [ 91%]
+test/test_pawpal.py::test_recurrence_steps_across_year_boundary PASSED                                                                                                                                                   [ 93%]
+test/test_pawpal.py::test_overdue_daily_task_catches_up_to_today PASSED                                                                                                                                                  [ 95%]
+test/test_pawpal.py::test_next_occurrence_without_today_advances_exactly_one_step PASSED                                                                                                                                 [ 97%]
+test/test_pawpal.py::test_late_task_end_minutes_extend_past_midnight_and_display_wraps PASSED                                                                                                                            [100%]
 
-======================================= 45 passed in 0.23s ========================================
+===================================================================================================== 45 passed in 6.90s ======================================================================================================
 ```
 
 The suite spans three files:
